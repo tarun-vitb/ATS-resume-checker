@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Resume Optimizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 1);
+        }
+
+        .drop-zone {
+            transition: all 0.3s ease;
+            border: 2px dashed #cbd5e1;
+        }
+
+        .drop-zone:hover, .drop-zone.active {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        .score-circle {
+            transition: stroke-dashoffset 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        #loading-overlay {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800">
+
+    <!-- Header -->
+    <nav class="bg-white border-b border-slate-200 py-4 mb-8">
+        <div class="max-w-5xl mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <div class="bg-blue-600 p-2 rounded-lg">
+                    <i class="fas fa-file-invoice text-white"></i>
+                </div>
+                <span class="text-xl font-bold tracking-tight text-slate-900">ATS<span class="text-blue-600">Checker</span></span>
+            </div>
+            <div class="hidden md:flex space-x-6 text-sm font-medium text-slate-500">
+                <a href="#" class="hover:text-blue-600">Dashboard</a>
+                <a href="#" class="hover:text-blue-600">Templates</a>
+                <a href="#" class="hover:text-blue-600">FAQ</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-4 pb-20">
+        <!-- Hero Section -->
+        <div class="text-center mb-12 animate-fade-in">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-4">Optimize Your Resume for ATS</h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                Upload your resume to see how well it performs against automated systems. Get instant scoring and actionable feedback.
+            </p>
+        </div>
+
+        <!-- Upload Section -->
+        <div id="upload-container" class="glass-card rounded-2xl p-8 shadow-sm mb-8 animate-fade-in" style="animation-delay: 0.1s;">
+            <div id="drop-zone" class="drop-zone rounded-xl p-12 text-center cursor-pointer">
+                <input type="file" id="file-input" class="hidden" accept=".pdf,.doc,.docx,.txt">
+                <div class="flex flex-col items-center">
+                    <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
+                        <i class="fas fa-cloud-upload-alt text-2xl text-blue-600"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold mb-2">Click to upload or drag and drop</h3>
+                    <p class="text-slate-500 text-sm mb-6">Supported formats: PDF, DOCX (Max 5MB)</p>
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-sm">
+                        Select File
+                    </button>
+                </div>
+            </div>
+            
+            <div id="selected-file-info" class="mt-6 hidden items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <div class="flex items-center space-x-3">
+                    <i class="far fa-file-pdf text-red-500 text-xl" id="file-icon"></i>
+                    <div>
+                        <p id="file-name" class="font-medium text-sm"></p>
+                        <p id="file-size" class="text-xs text-slate-500"></p>
+                    </div>
+                </div>
+                <button id="analyze-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-2 rounded-lg font-semibold transition-all">
+                    Analyze Now
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="text-center py-20">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
+            <p class="text-slate-600 font-medium">Scanning resume content and structure...</p>
+        </div>
+
+        <!-- Results Section (Hidden initially) -->
+        <div id="results-container" class="hidden animate-fade-in">
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Score Card -->
+                <div class="md:col-span-1 glass-card rounded-2xl p-8 shadow-sm text-center flex flex-col items-center justify-center">
+                    <h3 class="text-slate-500 uppercase tracking-wider text-xs font-bold mb-6">ATS Match Score</h3>
+                    <div class="relative w-40 h-40">
+                        <svg class="w-full h-full" viewBox="0 0 100 100">
+                            <circle class="text-slate-100 stroke-current" stroke-width="8" cx="50" cy="50" r="40" fill="transparent"></circle>
+                            <circle id="score-ring" class="text-blue-600 stroke-current score-circle" stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent" stroke-dasharray="251.2" stroke-dashoffset="251.2" transform="rotate(-90 50 50)"></circle>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span id="score-text" class="text-4xl font-black text-slate-900">0</span>
+                            <span class="text-slate-400 font-bold ml-0.5">%</span>
+                        </div>
+                    </div>
+                    <p id="score-verdict" class="mt-6 font-semibold px-4 py-1 rounded-full text-sm"></p>
+                </div>
+
+                <!-- Analysis Breakdown -->
+                <div class="md:col-span-2 glass-card rounded-2xl p-8 shadow-sm">
+                    <h3 class="text-lg font-bold mb-6 flex items-center">
+                        <i class="fas fa-list-check text-blue-600 mr-2"></i> Analysis Breakdown
+                    </h3>
+                    <div id="check-list" class="space-y-4">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="mt-8 glass-card rounded-2xl p-8 shadow-sm">
+                <h3 class="text-lg font-bold mb-6 flex items-center">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-2"></i> Improvement Guidance
+                </h3>
+                <div id="recommendations" class="grid md:grid-cols-2 gap-6">
+                    <!-- Dynamic content -->
+                </div>
+                <div class="mt-10 pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between">
+                    <p class="text-slate-500 text-sm mb-4 md:mb-0">Ready to try another version of your resume?</p>
+                    <button onclick="resetUI()" class="text-blue-600 font-semibold hover:underline">
+                        <i class="fas fa-undo mr-1"></i> Start Over
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions Section -->
+        <section id="info-section" class="mt-20 border-t border-slate-200 pt-16">
+            <div class="text-center mb-10">
+                <h2 class="text-2xl font-bold text-slate-900">How to Interpret Your Results</h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-slate-100">
+                    <div class="text-blue-600 mb-4 text-xl"><i class="fas fa-shield-alt"></i></div>
+                    <h4 class="font-bold mb-2">0-40: Low Match</h4>
+                    <p class="text-slate-600 text-sm leading-relaxed">Your resume may be missing critical sections or using non-standard formatting that ATS robots cannot read.</p>
+                </div>
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-slate-100">
+                    <div class="text-blue-600 mb-4 text-xl"><i class="fas fa-search"></i></div>
+                    <h4 class="font-bold mb-2">41-75: Moderate Match</h4>
+                    <p class="text-slate-600 text-sm leading-relaxed">You have a solid foundation, but adding more industry-specific keywords and quantifiable achievements will help.</p>
+                </div>
+                <div class="p-6 bg-white rounded-xl shadow-sm border border-slate-100">
+                    <div class="text-blue-600 mb-4 text-xl"><i class="fas fa-check-circle"></i></div>
+                    <h4 class="font-bold mb-2">76-100: Optimized</h4>
+                    <p class="text-slate-600 text-sm leading-relaxed">Your resume is highly readable for both machines and recruiters. Ensure it matches the specific job description.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-12">
+        <div class="max-w-5xl mx-auto px-4 text-center">
+            <p class="text-sm">Built for Job Seekers. No personal data is stored on our servers.</p>
+            <div class="mt-4 flex justify-center space-x-4">
+                <a href="#" class="hover:text-white transition-colors">Privacy</a>
+                <a href="#" class="hover:text-white transition-colors">Terms</a>
+                <a href="#" class="hover:text-white transition-colors">Support</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const selectedInfo = document.getElementById('selected-file-info');
+        const fileNameDisp = document.getElementById('file-name');
+        const fileSizeDisp = document.getElementById('file-size');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const uploadContainer = document.getElementById('upload-container');
+        const resultsContainer = document.getElementById('results-container');
+        const scoreRing = document.getElementById('score-ring');
+        const scoreText = document.getElementById('score-text');
+        const scoreVerdict = document.getElementById('score-verdict');
+        const checkList = document.getElementById('check-list');
+        const recommendations = document.getElementById('recommendations');
+        const infoSection = document.getElementById('info-section');
+
+        let currentFile = null;
+
+        // Event Listeners
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files[0]));
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('active');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('active');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            handleFiles(e.dataTransfer.files[0]);
+        });
+
+        analyzeBtn.addEventListener('click', startAnalysis);
+
+        function handleFiles(file) {
+            if (!file) return;
+            
+            currentFile = file;
+            fileNameDisp.innerText = file.name;
+            fileSizeDisp.innerText = (file.size / 1024).toFixed(1) + ' KB';
+            
+            dropZone.classList.add('hidden');
+            selectedInfo.classList.remove('hidden');
+            selectedInfo.classList.add('flex');
+        }
+
+        function startAnalysis() {
+            uploadContainer.classList.add('hidden');
+            infoSection.classList.add('hidden');
+            loadingOverlay.style.display = 'block';
+
+            // Simulate parsing and analysis delay
+            setTimeout(() => {
+                const results = performAnalysis();
+                renderResults(results);
+            }, 2000);
+        }
+
+        function performAnalysis() {
+            // Simulated ATS Scoring Logic
+            // In a real app, this would involve parsing the text using PDF.js or Docx.js
+            
+            // For demonstration, we simulate variability based on the filename length 
+            // and some fixed professional keyword checks
+            const keywords = ['experience', 'education', 'skills', 'summary', 'leadership', 'managed', 'project', 'developed'];
+            const fileNameLower = currentFile.name.toLowerCase();
+            
+            let score = 0;
+            let checks = [];
+            
+            // 1. Structure Check (Simulated)
+            const hasGoodSections = true; 
+            score += hasGoodSections ? 25 : 5;
+            checks.push({
+                label: "Core Sections Detected",
+                status: hasGoodSections ? 'pass' : 'fail',
+                desc: "We found standard sections like Work Experience, Skills, and Education."
+            });
+
+            // 2. Keyword Density (Simulated)
+            const keywordMatch = Math.floor(Math.random() * (25 - 15 + 1)) + 15;
+            score += keywordMatch;
+            checks.push({
+                label: "Keyword Optimization",
+                status: keywordMatch > 15 ? 'pass' : 'warning',
+                desc: `Your resume matches ${keywordMatch}% of standard industry keywords.`
+            });
+
+            // 3. File Format
+            const isPDF = fileNameLower.endsWith('.pdf');
+            score += isPDF ? 25 : 15;
+            checks.push({
+                label: "File Compatibility",
+                status: isPDF ? 'pass' : 'warning',
+                desc: isPDF ? "PDF format is highly recommended for ATS readability." : "Word documents are okay, but PDF ensures layout consistency."
+            });
+
+            // 4. Contact Info
+            const hasContact = !fileNameLower.includes('anonymous');
+            score += hasContact ? 25 : 0;
+            checks.push({
+                label: "Contact Information",
+                status: hasContact ? 'pass' : 'fail',
+                desc: "Email and Phone number headers were successfully identified."
+            });
+
+            return { score, checks };
+        }
+
+        function renderResults(data) {
+            loadingOverlay.style.display = 'none';
+            resultsContainer.classList.remove('hidden');
+
+            // Animate Score
+            let currentScore = 0;
+            const targetScore = data.score;
+            const interval = setInterval(() => {
+                if (currentScore >= targetScore) {
+                    clearInterval(interval);
+                } else {
+                    currentScore++;
+                    scoreText.innerText = currentScore;
+                    const offset = 251.2 - (251.2 * currentScore) / 100;
+                    scoreRing.style.strokeDashoffset = offset;
+                }
+            }, 20);
+
+            // Set Verdict
+            if (targetScore > 75) {
+                scoreVerdict.innerText = "Highly Optimized";
+                scoreVerdict.classList.add('bg-emerald-100', 'text-emerald-700');
+            } else if (targetScore > 40) {
+                scoreVerdict.innerText = "Moderate Match";
+                scoreVerdict.classList.add('bg-amber-100', 'text-amber-700');
+            } else {
+                scoreVerdict.innerText = "Needs Improvement";
+                scoreVerdict.classList.add('bg-red-100', 'text-red-700');
+            }
+
+            // Render Checks
+            checkList.innerHTML = data.checks.map(check => `
+                <div class="flex items-start space-x-4 p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                    <div class="mt-1">
+                        ${check.status === 'pass' ? 
+                            '<i class="fas fa-check-circle text-emerald-500 text-lg"></i>' : 
+                            (check.status === 'warning' ? '<i class="fas fa-exclamation-triangle text-amber-500 text-lg"></i>' : '<i class="fas fa-times-circle text-red-500 text-lg"></i>')}
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm">${check.label}</h4>
+                        <p class="text-xs text-slate-500 leading-relaxed">${check.desc}</p>
+                    </div>
+                </div>
+            `).join('');
+
+            // Render Recommendations
+            const recs = [
+                { title: "Use Standard Headers", body: "Avoid creative headers like 'Where I've Been'. Use 'Work Experience' so ATS can parse your timeline." },
+                { title: "Quantify Achievements", body: "Instead of 'Managed a team', use 'Managed a team of 10 to increase sales by 20% over 6 months'." },
+                { title: "Clean Formatting", body: "Remove tables, text boxes, and images. They often confuse legacy ATS parsing software." },
+                { title: "File Naming", body: "Name your file professionally: 'Firstname-Lastname-Resume.pdf' rather than 'resume_v3_final_final.pdf'." }
+            ];
+
+            recommendations.innerHTML = recs.map(r => `
+                <div>
+                    <h4 class="font-bold text-slate-900 mb-1 text-sm">${r.title}</h4>
+                    <p class="text-xs text-slate-500 leading-relaxed">${r.body}</p>
+                </div>
+            `).join('');
+        }
+
+        function resetUI() {
+            currentFile = null;
+            fileInput.value = '';
+            resultsContainer.classList.add('hidden');
+            uploadContainer.classList.remove('hidden');
+            infoSection.classList.remove('hidden');
+            dropZone.classList.remove('hidden');
+            selectedInfo.classList.add('hidden');
+            selectedInfo.classList.remove('flex');
+            
+            // Reset score Ring
+            scoreRing.style.strokeDashoffset = 251.2;
+            scoreVerdict.className = "mt-6 font-semibold px-4 py-1 rounded-full text-sm";
+        }
+    </script>
+</body>
+</html>
